@@ -10,18 +10,17 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ImageKitUploader } from '@/components/imagekit-uploader';
-import { IKImage } from 'imagekitio-react';
+import Image from 'next/image';
 
 interface Settings {
   location: string;
   phone: string;
   email: string;
-  heroImagePath: string;
+  heroImageUrl: string;
   socials: {
     facebook: string;
     twitter: string;
-instagram: string;
+    instagram: string;
     whatsapp: string;
   };
 }
@@ -81,13 +80,6 @@ export default function SettingsPage() {
       },
     }));
   };
-  
-    const handleHeroImageUpload = (filePath: string) => {
-        setSettings(prev => ({
-            ...prev,
-            heroImagePath: filePath
-        }));
-    };
 
   if (isLoading) {
     return (
@@ -167,17 +159,21 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Hero Image</Label>
-               {settings.heroImagePath && (
+              <Label htmlFor="heroImageUrl">Hero Image URL</Label>
+               {settings.heroImageUrl && (
                 <div className="mt-2 border rounded-md p-2 max-w-sm">
-                    <p className="text-sm text-muted-foreground mb-2">Current Image:</p>
-                    <IKImage path={settings.heroImagePath} transformation={[{ "height": "200" }]} className="rounded-md"/>
+                    <p className="text-sm text-muted-foreground mb-2">Current Image Preview:</p>
+                    <img src={settings.heroImageUrl} alt="Hero Preview" className="rounded-md object-cover w-full aspect-video"/>
                 </div>
               )}
-              <div className="pt-2">
-                <ImageKitUploader onSuccess={handleHeroImageUpload} folder="site-assets" />
-                <p className="text-sm text-muted-foreground mt-2">Upload a new hero image. Changes are saved when you click the "Save All Settings" button below.</p>
-              </div>
+              <Input 
+                id="heroImageUrl" 
+                value={settings.heroImageUrl || ''} 
+                onChange={(e) => setSettings(prev => ({...prev, heroImageUrl: e.target.value}))} 
+                disabled={isSaving}
+                placeholder="https://example.com/image.jpg"
+              />
+              <p className="text-sm text-muted-foreground mt-2">Paste the URL for your hero image. Changes are saved when you click the "Save All Settings" button below.</p>
             </div>
           </CardContent>
         </Card>

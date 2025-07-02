@@ -13,16 +13,14 @@ import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
-import { IKImage } from 'imagekitio-react';
-import { ImageKitUploader } from '@/components/imagekit-uploader';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 interface Testimonial {
   id: string;
   name: string;
   text: string;
-  avatarPath?: string;
+  avatarUrl?: string;
 }
 
 export default function TestimonialsPage() {
@@ -65,7 +63,7 @@ export default function TestimonialsPage() {
     let testimonialData: Partial<Testimonial> = { 
         name: currentTestimonial.name,
         text: currentTestimonial.text,
-        avatarPath: currentTestimonial.avatarPath
+        avatarUrl: currentTestimonial.avatarUrl
     };
 
     try {
@@ -148,15 +146,18 @@ export default function TestimonialsPage() {
                 />
                </div>
                <div className="space-y-2">
-                <Label>Avatar Image</Label>
-                 {currentTestimonial.avatarPath && (
-                    <div className="mt-2">
-                        <IKImage path={currentTestimonial.avatarPath} transformation={[{ height: 64, width: 64 }]} width="64" height="64" className="rounded-full object-cover" />
-                    </div>
+                <Label htmlFor="avatarUrl">Avatar Image URL</Label>
+                {currentTestimonial.avatarUrl && (
+                  <div className="mt-2">
+                      <img src={currentTestimonial.avatarUrl} alt="Avatar Preview" className="w-16 h-16 rounded-full object-cover" />
+                  </div>
                 )}
-                <div className="pt-2">
-                    <ImageKitUploader onSuccess={(filePath) => setCurrentTestimonial(prev => ({...prev, avatarPath: filePath}))} />
-                </div>
+                <Input
+                  id="avatarUrl"
+                  placeholder="https://example.com/avatar.jpg"
+                  value={currentTestimonial.avatarUrl || ''}
+                  onChange={(e) => setCurrentTestimonial(prev => ({ ...prev, avatarUrl: e.target.value }))}
+                />
               </div>
             </div>
             <DialogFooter>
@@ -191,17 +192,14 @@ export default function TestimonialsPage() {
                 <TableRow key={testimonial.id}>
                   <TableCell>
                     <Avatar>
-                        {testimonial.avatarPath ? (
-                            <IKImage 
-                                path={testimonial.avatarPath} 
-                                transformation={[{ "height": "40", "width": "40" }]}
-                                width="40"
-                                height="40"
-                                className="rounded-full h-10 w-10 object-cover"
+                        {testimonial.avatarUrl ? (
+                            <AvatarImage 
+                                src={testimonial.avatarUrl} 
+                                alt={testimonial.name}
+                                className="h-10 w-10 object-cover"
                             />
-                        ) : (
-                            <AvatarFallback>{getInitials(testimonial.name)}</AvatarFallback>
-                        )}
+                        ) : null}
+                        <AvatarFallback>{getInitials(testimonial.name)}</AvatarFallback>
                     </Avatar>
                   </TableCell>
                   <TableCell className="font-medium">{testimonial.name}</TableCell>

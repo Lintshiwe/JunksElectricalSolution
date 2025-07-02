@@ -6,13 +6,13 @@ import { collection, onSnapshot, query, limit, doc, orderBy } from 'firebase/fir
 import { db } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Award, Leaf, Zap } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from '@/components/ui/skeleton';
 import { ServiceIcon } from '@/components/service-icon';
-import { IKContext, IKImage } from 'imagekitio-react';
+import Image from 'next/image';
 
 
 const features = [
@@ -43,11 +43,11 @@ interface Testimonial {
   id: string;
   name: string;
   text: string;
-  avatarPath?: string;
+  avatarUrl?: string;
 }
 
 interface Settings {
-  heroImagePath?: string;
+  heroImageUrl?: string;
 }
 
 export default function Home() {
@@ -58,10 +58,6 @@ export default function Home() {
   const [isLoadingTestimonials, setIsLoadingTestimonials] = useState(true);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   
-  const ikPublicKey = process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY;
-  const ikUrlEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT;
-
-
   useEffect(() => {
     const servicesQuery = query(collection(db, "services"), limit(4));
     const unsubscribeServices = onSnapshot(servicesQuery, (snapshot) => {
@@ -106,17 +102,7 @@ export default function Home() {
     return name.substring(0, 2).toUpperCase();
   };
 
-  if (!ikPublicKey || !ikUrlEndpoint) {
-    return (
-      <div className="container py-20 text-center">
-          <h1 className="text-2xl font-bold text-destructive">Configuration Error</h1>
-          <p className="text-muted-foreground">ImageKit is not configured. Please check your environment variables.</p>
-      </div>
-    )
-  }
-
   return (
-    <IKContext publicKey={ikPublicKey} urlEndpoint={ikUrlEndpoint}>
       <div className="flex flex-col">
         <section className="w-full py-20 md:py-32 lg:py-40 bg-primary/10">
           <div className="container px-4 md:px-6">
@@ -143,10 +129,9 @@ export default function Home() {
                 {isLoadingSettings ? (
                   <Skeleton className="aspect-video w-full max-w-[600px] rounded-xl" />
                 ) : (
-                  <IKImage
-                    path={settings.heroImagePath || "/default-image.jpg"}
-                    transformation={[{ width: 600, height: 400 }]}
-                    lqip={{ active: true }}
+                  <img
+                    src={settings.heroImageUrl || "https://placehold.co/600x400.png"}
+                    data-ai-hint="electrical work"
                     width="600"
                     height="400"
                     alt="Hero"
@@ -239,17 +224,14 @@ export default function Home() {
                           <Card>
                               <CardContent className="flex flex-col items-center justify-center p-6 space-y-4 text-center">
                                 <Avatar className="w-24 h-24 text-3xl">
-                                    {testimonial.avatarPath ? (
-                                      <IKImage 
-                                        path={testimonial.avatarPath} 
-                                        transformation={[{ height: 96, width: 96 }]}
-                                        lqip={{ active: true }}
+                                    {testimonial.avatarUrl ? (
+                                      <AvatarImage 
+                                        src={testimonial.avatarUrl} 
                                         className="aspect-square h-full w-full object-cover"
                                         alt={testimonial.name}
                                       />
-                                    ) : (
-                                      <AvatarFallback>{getInitials(testimonial.name)}</AvatarFallback>
-                                    )}
+                                    ) : null}
+                                    <AvatarFallback>{getInitials(testimonial.name)}</AvatarFallback>
                                 </Avatar>
                                 <p className="text-lg italic text-muted-foreground">"{testimonial.text}"</p>
                                 <p className="font-semibold">- {testimonial.name}</p>
@@ -285,6 +267,5 @@ export default function Home() {
           </div>
         </section>
       </div>
-    </IKContext>
   );
 }
