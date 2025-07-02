@@ -13,8 +13,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Skeleton } from '@/components/ui/skeleton';
 import { ServiceIcon } from '@/components/service-icon';
-import { useAuth } from '@/hooks/use-auth';
-import { HeroImageEditor } from '@/components/hero-image-editor';
 
 
 const features = [
@@ -54,12 +52,13 @@ interface Settings {
 
 
 export default function Home() {
-  const { user } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [settings, setSettings] = useState<Settings>({});
   const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [isLoadingTestimonials, setIsLoadingTestimonials] = useState(true);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+
 
   useEffect(() => {
     const servicesQuery = query(collection(db, "services"), limit(4));
@@ -86,6 +85,7 @@ export default function Home() {
         if(doc.exists()) {
             setSettings(doc.data() as Settings);
         }
+        setIsLoadingSettings(false);
     });
 
     return () => {
@@ -129,7 +129,7 @@ export default function Home() {
               </div>
             </div>
             <div className="relative mx-auto lg:order-last">
-              {isLoadingServices && !settings.heroImageUrl ? (
+              {isLoadingSettings ? (
                 <Skeleton className="aspect-video w-full max-w-[600px] rounded-xl" />
               ) : (
                 <Image
@@ -142,7 +142,6 @@ export default function Home() {
                   priority
                 />
               )}
-              {user && <HeroImageEditor />}
             </div>
           </div>
         </div>

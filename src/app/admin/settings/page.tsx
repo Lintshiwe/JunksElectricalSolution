@@ -150,6 +150,20 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Homepage Settings</CardTitle>
+             <CardDescription>Manage the appearance of your homepage.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="heroImageUrl">Hero Image URL</Label>
+              <Input id="heroImageUrl" value={settings.heroImageUrl || ''} onChange={handleInputChange} disabled={isSaving}/>
+              <p className="text-sm text-muted-foreground">Paste a URL for the main image on the homepage.</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Button onClick={handleSave} disabled={isSaving}>

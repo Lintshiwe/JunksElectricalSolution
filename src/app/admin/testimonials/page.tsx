@@ -3,8 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,9 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
-import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
-import imageCompression from 'browser-image-compression';
 
 interface Testimonial {
   id: string;
@@ -30,8 +27,6 @@ export default function TestimonialsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentTestimonial, setCurrentTestimonial] = useState<Partial<Testimonial>>({});
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -52,33 +47,10 @@ export default function TestimonialsPage() {
     });
     return () => unsubscribe();
   }, [toast]);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      toast({ title: 'Compressing avatar...' });
-      try {
-        const options = {
-          maxSizeMB: 0.5, // Avatars can be smaller
-          maxWidthOrHeight: 400,
-          useWebWorker: true,
-        };
-        const compressedFile = await imageCompression(file, options);
-        setAvatarFile(compressedFile);
-        toast({ title: 'Avatar ready', description: 'The compressed avatar is ready.' });
-      } catch (error) {
-        console.error('Error compressing image:', error);
-        toast({ title: 'Compression Failed', description: 'Could not compress the image.', variant: 'destructive' });
-        setAvatarFile(null);
-      }
-    }
-  };
   
   const resetDialog = () => {
     setIsDialogOpen(false);
     setCurrentTestimonial({});
-    setAvatarFile(null);
-    setUploadProgress(0);
   }
 
   const handleSave = async () => {
@@ -86,42 +58,12 @@ export default function TestimonialsPage() {
       toast({ title: "Validation Error", description: "Name and testimonial text are required.", variant: 'destructive' });
       return;
     }
-
-    if (!storage) {
-        toast({ title: 'Configuration Error', description: 'Firebase Storage is not properly configured. Check your environment variables.', variant: 'destructive' });
-        return;
-    }
     
     let testimonialData: Partial<Testimonial> = { 
         name: currentTestimonial.name,
         text: currentTestimonial.text,
         avatarUrl: currentTestimonial.avatarUrl
     };
-    
-    if (avatarFile) {
-        const storageRef = ref(storage, `testimonials-avatars/${Date.now()}-${avatarFile.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, avatarFile);
-
-        try {
-            await new Promise<void>((resolve, reject) => {
-                uploadTask.on('state_changed',
-                    (snapshot) => setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100),
-                    (error) => {
-                        console.error("Upload failed:", error);
-                        reject(error);
-                    },
-                    async () => {
-                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                        testimonialData.avatarUrl = downloadURL;
-                        resolve();
-                    }
-                );
-            });
-        } catch (error) {
-            toast({ title: 'Image Upload Failed', description: 'Could not upload avatar.', variant: 'destructive' });
-            return;
-        }
-    }
 
     try {
       if (currentTestimonial.id) {
@@ -153,8 +95,6 @@ export default function TestimonialsPage() {
   
   const openDialog = (testimonial?: Testimonial) => {
       setCurrentTestimonial(testimonial || {});
-      setAvatarFile(null);
-      setUploadProgress(0);
       setIsDialogOpen(true);
   }
 
@@ -196,18 +136,18 @@ export default function TestimonialsPage() {
                 />
                </div>
                <div className="space-y-2">
-                <Label htmlFor="avatarUrl">Avatar Image</Label>
-                {avatarFile ? (
-                    <div className="mt-2">
-                        <Image src={URL.createObjectURL(avatarFile)} alt="New Avatar Preview" width={64} height={64} className="rounded-full object-cover" />
-                    </div>
-                 ) : currentTestimonial.avatarUrl && (
+                <Label htmlFor="avatarUrl">Avatar Image URL</Label>
+                 {currentTestimonial.avatarUrl && (
                     <div className="mt-2">
                         <Image src={currentTestimonial.avatarUrl} alt="Avatar Preview" width={64} height={64} className="rounded-full object-cover" />
                     </div>
                 )}
-                <Input id="avatarUrl" type="file" onChange={handleFileChange} accept="image/*"/>
-                {uploadProgress > 0 && <Progress value={uploadProgress} className="w-[60%] mt-2" />}
+                <Input 
+                    id="avatarUrl"
+                    placeholder="https://example.com/image.png"
+                    value={currentTestimonial.avatarUrl || ''}
+                    onChange={(e) => setCurrentTestimonial(prev => ({ ...prev, avatarUrl: e.target.value }))}
+                />
               </div>
             </div>
             <DialogFooter>
