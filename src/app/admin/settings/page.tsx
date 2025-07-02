@@ -130,7 +130,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Social Media</CardTitle>
              <CardDescription>Full URLs for your social media profiles.</CardDescription>
-          </Header>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="facebook">Facebook URL</Label>
