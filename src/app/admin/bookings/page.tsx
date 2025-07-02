@@ -7,6 +7,8 @@ import { db } from '@/lib/firebase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface Booking {
   id: string;
@@ -23,17 +25,26 @@ interface Booking {
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, "bookings"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const bookingsData: Booking[] = [];
-      querySnapshot.forEach((doc) => {
-        bookingsData.push({ id: doc.id, ...doc.data() } as Booking);
-      });
-      setBookings(bookingsData);
-      setIsLoading(false);
-    });
+    const unsubscribe = onSnapshot(q, 
+      (querySnapshot) => {
+        const bookingsData: Booking[] = [];
+        querySnapshot.forEach((doc) => {
+          bookingsData.push({ id: doc.id, ...doc.data() } as Booking);
+        });
+        setBookings(bookingsData);
+        setError(null);
+        setIsLoading(false);
+      },
+      (err) => {
+        console.error("Firestore error reading bookings:", err);
+        setError("You don't have permission to view bookings. Please update your Firestore security rules to allow reads for authenticated users.");
+        setIsLoading(false);
+      }
+    );
 
     return () => unsubscribe();
   }, []);
@@ -46,6 +57,15 @@ export default function BookingsPage() {
           View and manage all service appointments.
         </p>
       </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Permission Denied</AlertTitle>
+          <AlertDescription>
+           {error}
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="border rounded-md">
         <Table>
           <TableHeader>
@@ -85,7 +105,7 @@ export default function BookingsPage() {
             ) : (
               <TableRow>
                 <TableCell colSpan={4} className="h-24 text-center">
-                  No bookings found.
+                  {error ? "Could not load data due to permission errors." : "No bookings found."}
                 </TableCell>
               </TableRow>
             )}

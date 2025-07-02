@@ -7,6 +7,8 @@ import { db } from '@/lib/firebase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -21,17 +23,26 @@ interface Message {
 export default function MessagesPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const messagesData: Message[] = [];
-      querySnapshot.forEach((doc) => {
-        messagesData.push({ id: doc.id, ...doc.data() } as Message);
-      });
-      setMessages(messagesData);
-      setIsLoading(false);
-    });
+    const unsubscribe = onSnapshot(q, 
+      (querySnapshot) => {
+        const messagesData: Message[] = [];
+        querySnapshot.forEach((doc) => {
+          messagesData.push({ id: doc.id, ...doc.data() } as Message);
+        });
+        setMessages(messagesData);
+        setError(null);
+        setIsLoading(false);
+      },
+      (err) => {
+        console.error("Firestore error reading messages:", err);
+        setError("You don't have permission to view messages. Please update your Firestore security rules to allow reads for authenticated users.");
+        setIsLoading(false);
+      }
+    );
 
     return () => unsubscribe();
   }, []);
@@ -44,6 +55,15 @@ export default function MessagesPage() {
           View messages from the contact form.
         </p>
       </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Permission Denied</AlertTitle>
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="border rounded-md">
         <Table>
           <TableHeader>
@@ -78,7 +98,7 @@ export default function MessagesPage() {
             ) : (
               <TableRow>
                 <TableCell colSpan={3} className="h-24 text-center">
-                  No messages found.
+                  {error ? "Could not load data due to permission errors." : "No messages found."}
                 </TableCell>
               </TableRow>
             )}
