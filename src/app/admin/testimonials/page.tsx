@@ -12,14 +12,17 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import Image from 'next/image';
 import { Label } from '@/components/ui/label';
+import { IKImage } from 'imagekitio-react';
+import { ImageKitUploader } from '@/components/imagekit-uploader';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
 
 interface Testimonial {
   id: string;
   name: string;
   text: string;
-  avatarUrl?: string;
+  avatarPath?: string;
 }
 
 export default function TestimonialsPage() {
@@ -62,7 +65,7 @@ export default function TestimonialsPage() {
     let testimonialData: Partial<Testimonial> = { 
         name: currentTestimonial.name,
         text: currentTestimonial.text,
-        avatarUrl: currentTestimonial.avatarUrl
+        avatarPath: currentTestimonial.avatarPath
     };
 
     try {
@@ -97,6 +100,15 @@ export default function TestimonialsPage() {
       setCurrentTestimonial(testimonial || {});
       setIsDialogOpen(true);
   }
+
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const parts = name.trim().split(' ');
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
   return (
     <div className="space-y-6">
@@ -136,18 +148,15 @@ export default function TestimonialsPage() {
                 />
                </div>
                <div className="space-y-2">
-                <Label htmlFor="avatarUrl">Avatar Image URL</Label>
-                 {currentTestimonial.avatarUrl && (
+                <Label>Avatar Image</Label>
+                 {currentTestimonial.avatarPath && (
                     <div className="mt-2">
-                        <Image src={currentTestimonial.avatarUrl} alt="Avatar Preview" width={64} height={64} className="rounded-full object-cover" />
+                        <IKImage path={currentTestimonial.avatarPath} transformation={[{ height: 64, width: 64 }]} width="64" height="64" className="rounded-full object-cover" />
                     </div>
                 )}
-                <Input 
-                    id="avatarUrl"
-                    placeholder="https://example.com/image.png"
-                    value={currentTestimonial.avatarUrl || ''}
-                    onChange={(e) => setCurrentTestimonial(prev => ({ ...prev, avatarUrl: e.target.value }))}
-                />
+                <div className="pt-2">
+                    <ImageKitUploader onSuccess={(filePath) => setCurrentTestimonial(prev => ({...prev, avatarPath: filePath}))} />
+                </div>
               </div>
             </div>
             <DialogFooter>
@@ -181,13 +190,19 @@ export default function TestimonialsPage() {
               testimonials.map((testimonial) => (
                 <TableRow key={testimonial.id}>
                   <TableCell>
-                    <Image 
-                        src={testimonial.avatarUrl || `https://placehold.co/100x100.png`} 
-                        alt={testimonial.name}
-                        width={40}
-                        height={40}
-                        className="rounded-full h-10 w-10 object-cover"
-                    />
+                    <Avatar>
+                        {testimonial.avatarPath ? (
+                            <IKImage 
+                                path={testimonial.avatarPath} 
+                                transformation={[{ "height": "40", "width": "40" }]}
+                                width="40"
+                                height="40"
+                                className="rounded-full h-10 w-10 object-cover"
+                            />
+                        ) : (
+                            <AvatarFallback>{getInitials(testimonial.name)}</AvatarFallback>
+                        )}
+                    </Avatar>
                   </TableCell>
                   <TableCell className="font-medium">{testimonial.name}</TableCell>
                   <TableCell className="text-muted-foreground max-w-md truncate">{testimonial.text}</TableCell>

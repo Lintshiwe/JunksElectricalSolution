@@ -10,16 +10,18 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ImageKitUploader } from '@/components/imagekit-uploader';
+import { IKImage } from 'imagekitio-react';
 
 interface Settings {
   location: string;
   phone: string;
   email: string;
-  heroImageUrl: string;
+  heroImagePath: string;
   socials: {
     facebook: string;
     twitter: string;
-    instagram: string;
+instagram: string;
     whatsapp: string;
   };
 }
@@ -80,6 +82,13 @@ export default function SettingsPage() {
     }));
   };
   
+    const handleHeroImageUpload = (filePath: string) => {
+        setSettings(prev => ({
+            ...prev,
+            heroImagePath: filePath
+        }));
+    };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -158,9 +167,17 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="heroImageUrl">Hero Image URL</Label>
-              <Input id="heroImageUrl" value={settings.heroImageUrl || ''} onChange={handleInputChange} disabled={isSaving}/>
-              <p className="text-sm text-muted-foreground">Paste a URL for the main image on the homepage.</p>
+              <Label>Hero Image</Label>
+               {settings.heroImagePath && (
+                <div className="mt-2 border rounded-md p-2 max-w-sm">
+                    <p className="text-sm text-muted-foreground mb-2">Current Image:</p>
+                    <IKImage path={settings.heroImagePath} transformation={[{ "height": "200" }]} className="rounded-md"/>
+                </div>
+              )}
+              <div className="pt-2">
+                <ImageKitUploader onSuccess={handleHeroImageUpload} folder="site-assets" />
+                <p className="text-sm text-muted-foreground mt-2">Upload a new hero image. Changes are saved when you click the "Save All Settings" button below.</p>
+              </div>
             </div>
           </CardContent>
         </Card>
