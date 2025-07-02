@@ -2,10 +2,6 @@
 
 ---
 
-# 🌟 Junks
-
-A **Next.js starter** powered by **Firebase Studio**, crafted for rapid prototyping and deployment of modern web applications. This project scaffolds the foundational setup for scalable apps with clean architecture, developer-friendly configurations, and a minimalistic UI waiting to be extended.
-
 ## 🚀 Getting Started
 
 To run this project locally:
