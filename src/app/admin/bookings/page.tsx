@@ -8,13 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, FileText } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 
 interface Booking {
   id: string;
@@ -42,9 +38,6 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
-  const [quoteContent, setQuoteContent] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -87,26 +80,6 @@ export default function BookingsPage() {
     }
   };
 
-  const handleOpenQuoteDialog = (booking: Booking) => {
-    setSelectedBooking(booking);
-    setQuoteContent(`Hi ${booking.name},\n\nThank you for your inquiry about our ${booking.service} service.\n\nPlease find the quotation below:\n\n- \n\nTotal: \n\nBest regards,\nThe Junks Electrical Solutions Team`);
-    setIsQuoteDialogOpen(true);
-  };
-  
-  const handleSendQuote = () => {
-    if (!selectedBooking || !quoteContent) return;
-
-    const subject = `Quotation for your inquiry: ${selectedBooking.service}`;
-    const body = encodeURIComponent(quoteContent);
-    const mailtoLink = `mailto:${selectedBooking.email}?subject=${encodeURIComponent(subject)}&body=${body}`;
-    
-    window.location.href = mailtoLink;
-    
-    setIsQuoteDialogOpen(false);
-    setSelectedBooking(null);
-    setQuoteContent("");
-  };
-
   return (
     <div className="space-y-6">
       <div>
@@ -132,8 +105,7 @@ export default function BookingsPage() {
               <TableHead>Contact</TableHead>
               <TableHead>Service</TableHead>
               <TableHead>Date & Time</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-right">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -144,8 +116,7 @@ export default function BookingsPage() {
                   <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                  <TableCell><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-8 w-28 ml-auto" /></TableCell>
                 </TableRow>
               ))
             ) : bookings.length > 0 ? (
@@ -158,12 +129,12 @@ export default function BookingsPage() {
                   </TableCell>
                   <TableCell>{booking.service}</TableCell>
                   <TableCell>{`${booking.date} at ${booking.time}`}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-right">
                     <Select
                       value={booking.status}
                       onValueChange={(newStatus: Booking['status']) => handleStatusChange(booking.id, newStatus)}
                     >
-                      <SelectTrigger className="w-[120px]">
+                      <SelectTrigger className="w-[120px] ml-auto">
                         <SelectValue>
                            <Badge variant={statusColors[booking.status]}>{booking.status}</Badge>
                         </SelectValue>
@@ -177,17 +148,11 @@ export default function BookingsPage() {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm" onClick={() => handleOpenQuoteDialog(booking)}>
-                        <FileText className="mr-2 h-4 w-4"/>
-                        Quote
-                    </Button>
-                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   {error ? "Could not load data due to permission errors." : "No bookings found."}
                 </TableCell>
               </TableRow>
@@ -195,32 +160,6 @@ export default function BookingsPage() {
           </TableBody>
         </Table>
       </div>
-
-       <Dialog open={isQuoteDialogOpen} onOpenChange={setIsQuoteDialogOpen}>
-          <DialogContent className="sm:max-w-[625px]">
-            <DialogHeader>
-              <DialogTitle>Create Quotation</DialogTitle>
-              <DialogDescription>
-                Draft a quotation for {selectedBooking?.name} for the service: {selectedBooking?.service}. This will open in your default email client.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="quote-content">Quotation Details</Label>
-                <Textarea 
-                    id="quote-content"
-                    value={quoteContent}
-                    onChange={(e) => setQuoteContent(e.target.value)}
-                    rows={15}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsQuoteDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSendQuote}>Send Quote via Email</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
     </div>
   );
 }

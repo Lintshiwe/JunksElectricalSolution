@@ -6,14 +6,12 @@ import Link from 'next/link';
 import { Lightbulb, Menu, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { QuickQuoteForm } from './quick-quote-form';
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -25,7 +23,6 @@ const navLinks = [
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();
@@ -40,11 +37,6 @@ export function Header() {
       toast({ title: "Logout failed", description: "Please try again.", variant: "destructive"});
     }
   };
-
-  const openQuoteDialog = () => {
-    setIsMobileMenuOpen(false);
-    setIsQuoteDialogOpen(true);
-  }
 
   return (
     <>
@@ -83,14 +75,14 @@ export function Header() {
 
           <div className="flex flex-1 items-center justify-end space-x-4">
             {user ? (
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
+               <Button variant="ghost" size="sm" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
               </Button>
             ) : (
-              <Button onClick={openQuoteDialog} className="hidden md:inline-flex bg-accent hover:bg-accent/90 text-accent-foreground">
-                Get a Quote
-              </Button>
+                <Button asChild className="hidden md:inline-flex bg-accent hover:bg-accent/90 text-accent-foreground">
+                    <Link href="/contact">Get a Quote</Link>
+                </Button>
             )}
 
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -133,8 +125,8 @@ export function Header() {
                     )}
                 </div>
                 {!user && (
-                  <Button onClick={openQuoteDialog} className="w-full mt-8 bg-accent hover:bg-accent/90 text-accent-foreground">
-                    Get a Quote
+                  <Button asChild className="w-full mt-8 bg-accent hover:bg-accent/90 text-accent-foreground">
+                    <Link href="/contact" onClick={() => setIsMobileMenuOpen(false)}>Get a Quote</Link>
                   </Button>
                 )}
               </SheetContent>
@@ -142,18 +134,6 @@ export function Header() {
           </div>
         </div>
       </header>
-      
-      <Dialog open={isQuoteDialogOpen} onOpenChange={setIsQuoteDialogOpen}>
-        <DialogContent className="sm:max-w-[480px]">
-            <DialogHeader>
-                <DialogTitle className="font-headline text-2xl">Request a Quick Quote</DialogTitle>
-                <DialogDescription>
-                    Fill out this quick form and we'll get back to you shortly.
-                </DialogDescription>
-            </DialogHeader>
-            <QuickQuoteForm onSuccess={() => setIsQuoteDialogOpen(false)} />
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
