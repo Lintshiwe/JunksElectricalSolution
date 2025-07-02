@@ -181,7 +181,7 @@ export default function TestimonialsPage() {
                 <Label htmlFor="name">Customer Name</Label>
                 <Input
                   id="name"
-                  placeholder="John Doe"
+                  placeholder="Junks Malatji"
                   value={currentTestimonial.name || ''}
                   onChange={(e) => setCurrentTestimonial(prev => ({ ...prev, name: e.target.value }))}
                 />
