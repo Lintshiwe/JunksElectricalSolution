@@ -13,6 +13,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Skeleton } from '@/components/ui/skeleton';
 import { ServiceIcon } from '@/components/service-icon';
+import { useAuth } from '@/hooks/use-auth';
+import { HeroImageEditor } from '@/components/hero-image-editor';
 
 
 const features = [
@@ -52,6 +54,7 @@ interface Settings {
 
 
 export default function Home() {
+  const { user } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [settings, setSettings] = useState<Settings>({});
@@ -125,16 +128,22 @@ export default function Home() {
                 </Button>
               </div>
             </div>
-            {isLoadingServices && !settings.heroImageUrl ? <Skeleton className="mx-auto aspect-video w-full rounded-xl" /> : 
-            <Image
-              src={settings.heroImageUrl || "https://placehold.co/600x400.png"}
-              width="600"
-              height="400"
-              alt="Hero"
-              data-ai-hint="electrician work"
-              className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last"
-              priority
-            />}
+            <div className="relative mx-auto lg:order-last">
+              {isLoadingServices && !settings.heroImageUrl ? (
+                <Skeleton className="aspect-video w-full max-w-[600px] rounded-xl" />
+              ) : (
+                <Image
+                  src={settings.heroImageUrl || "https://placehold.co/600x400.png"}
+                  width="600"
+                  height="400"
+                  alt="Hero"
+                  data-ai-hint="electrician work"
+                  className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full"
+                  priority
+                />
+              )}
+              {user && <HeroImageEditor />}
+            </div>
           </div>
         </div>
       </section>

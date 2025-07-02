@@ -3,17 +3,13 @@
 
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { db, storage } from '@/lib/firebase';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
-import Image from 'next/image';
-import imageCompression from 'browser-image-compression';
 
 interface Settings {
   location: string;
@@ -32,8 +28,6 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Partial<Settings>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [heroImageFile, setHeroImageFile] = useState<File | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
   
   const { toast } = useToast();
 
@@ -56,70 +50,11 @@ export default function SettingsPage() {
     return () => unsubscribe();
   }, [toast]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      toast({ title: 'Compressing image...', description: 'Please wait a moment.' });
-      try {
-        const options = {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1920,
-          useWebWorker: true,
-        };
-        const compressedFile = await imageCompression(file, options);
-        setHeroImageFile(compressedFile);
-        toast({ title: 'Image ready', description: 'The compressed image is ready to be uploaded.' });
-      } catch (error) {
-        console.error('Error compressing image:', error);
-        toast({ title: 'Compression Failed', description: 'Could not compress the image. Please try another file.', variant: 'destructive' });
-        setHeroImageFile(null);
-      }
-    }
-  };
-
   const handleSave = async () => {
-    if (!storage) {
-      toast({ title: 'Configuration Error', description: 'Firebase Storage is not properly configured. Check your environment variables.', variant: 'destructive' });
-      return;
-    }
-
     setIsSaving(true);
-    let updatedSettings = { ...settings };
-
-    if (heroImageFile) {
-      const storageRef = ref(storage, `site-assets/hero-image-${Date.now()}`);
-      const uploadTask = uploadBytesResumable(storageRef, heroImageFile);
-
-      try {
-        await new Promise<void>((resolve, reject) => {
-          uploadTask.on('state_changed',
-            (snapshot) => {
-              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-              setUploadProgress(progress);
-            },
-            (error) => {
-              console.error("Upload failed:", error);
-              reject(error);
-            },
-            async () => {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              updatedSettings.heroImageUrl = downloadURL;
-              setHeroImageFile(null);
-              setUploadProgress(0);
-              resolve();
-            }
-          );
-        });
-      } catch (error) {
-        toast({ title: 'Image Upload Failed', description: 'Could not upload the new hero image.', variant: 'destructive' });
-        setIsSaving(false);
-        return;
-      }
-    }
-
     try {
       const settingsRef = doc(db, 'settings', 'site');
-      await setDoc(settingsRef, updatedSettings, { merge: true });
+      await setDoc(settingsRef, settings, { merge: true });
       toast({ title: 'Success', description: 'Settings saved successfully.' });
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -195,7 +130,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Social Media</CardTitle>
              <CardDescription>Full URLs for your social media profiles.</CardDescription>
-          </CardHeader>
+          </Header>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="facebook">Facebook URL</Label>
@@ -212,30 +147,6 @@ export default function SettingsPage() {
              <div className="space-y-2">
               <Label htmlFor="whatsapp">WhatsApp URL (e.g., https://wa.me/123...)</Label>
               <Input id="whatsapp" value={settings.socials?.whatsapp || ''} onChange={handleSocialChange} disabled={isSaving}/>
-            </div>
-          </CardContent>
-        </Card>
-        
-         <Card>
-          <CardHeader>
-            <CardTitle>Homepage Settings</CardTitle>
-             <CardDescription>Manage content on the homepage.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="heroImageUrl">Hero Image</Label>
-              {heroImageFile ? (
-                <div className="mt-2">
-                    <Image src={URL.createObjectURL(heroImageFile)} alt="New Hero Image Preview" width={200} height={100} className="rounded-md object-cover" />
-                </div>
-              ) : settings.heroImageUrl && (
-                <div className="mt-2">
-                  <Image src={settings.heroImageUrl} alt="Hero Image Preview" width={200} height={100} className="rounded-md object-cover" />
-                </div>
-              )}
-              <Input id="heroImageUrl" type="file" onChange={handleFileChange} accept="image/*" disabled={isSaving}/>
-              <p className="text-sm text-muted-foreground">Select a new image to replace the current one. The new image will be uploaded when you save settings.</p>
-              {isSaving && heroImageFile && <Progress value={uploadProgress} className="w-[60%] mt-2" />}
             </div>
           </CardContent>
         </Card>
