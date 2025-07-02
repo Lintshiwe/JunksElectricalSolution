@@ -1,7 +1,7 @@
 
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,9 +13,26 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-const db = getFirestore(app);
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
+let isFirebaseConfigured = false;
 
-export { app, auth, db };
+// We only initialize Firebase if the API key and project ID are provided.
+// This prevents the app from crashing if the .env file is not configured.
+if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+    try {
+        app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+        auth = getAuth(app);
+        db = getFirestore(app);
+        isFirebaseConfigured = true;
+    } catch (e) {
+        // Log the error for debugging, but don't crash the app
+        console.error("Firebase initialization error:", e);
+        isFirebaseConfigured = false;
+    }
+} else {
+    console.warn("Firebase environment variables are not set. The application will run in a limited mode.");
+}
+
+export { app, auth, db, isFirebaseConfigured };
