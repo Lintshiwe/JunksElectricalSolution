@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, where, limit, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit, doc, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,67 +42,41 @@ interface Service {
 interface Testimonial {
   id: string;
   name: string;
-  avatar: string;
   text: string;
-  image?: string;
+  avatarUrl?: string;
 }
 
 interface Settings {
   heroImageUrl?: string;
 }
 
-const hardcodedTestimonials = [
-  {
-    id: "1",
-    name: "Sarah L.",
-    avatar: "SL",
-    image: "https://placehold.co/100x100.png",
-    text: "The Junks were a lifesaver! They fixed my power outage in the middle of the night. Professional, fast, and reasonably priced. Highly recommend!",
-  },
-  {
-    id: "2",
-    name: "Mike R.",
-    avatar: "MR",
-    image: "https://placehold.co/100x100.png",
-    text: "The team installed new lighting in our retail store. The difference is night and day! The project was completed on time and on budget. Fantastic work.",
-  },
-  {
-    id: "3",
-    name: "Jennifer Chen",
-    avatar: "JC",
-    image: "https://placehold.co/100x100.png",
-    text: "I hired them to install an EV charger. The process was seamless from the initial quote to the final installation. Very knowledgeable and friendly staff.",
-  },
-];
 
 export default function Home() {
   const [services, setServices] = useState<Service[]>([]);
-  const [testimonials, setTestimonials] = useState<Testimonial[]>(hardcodedTestimonials);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [settings, setSettings] = useState<Settings>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingServices, setIsLoadingServices] = useState(true);
+  const [isLoadingTestimonials, setIsLoadingTestimonials] = useState(true);
 
   useEffect(() => {
-    setIsLoading(true);
     const servicesQuery = query(collection(db, "services"), limit(4));
     const unsubscribeServices = onSnapshot(servicesQuery, (snapshot) => {
       const servicesData: Service[] = [];
       snapshot.forEach((doc) => servicesData.push({ id: doc.id, ...doc.data() } as Service));
       setServices(servicesData);
-      setIsLoading(false);
-    }, () => setIsLoading(false));
+      setIsLoadingServices(false);
+    }, () => setIsLoadingServices(false));
 
-    // For now, we will keep testimonials hardcoded as there is no admin management for them yet.
-    // If you want to use Firestore for testimonials, uncomment the following block.
-    /*
-    const testimonialsQuery = query(collection(db, "testimonials"), where("approved", "==", true), limit(5));
+    const testimonialsQuery = query(collection(db, "testimonials"), orderBy("name"), limit(10));
     const unsubscribeTestimonials = onSnapshot(testimonialsQuery, (snapshot) => {
       const testimonialsData: Testimonial[] = [];
       snapshot.forEach((doc) => testimonialsData.push({ id: doc.id, ...doc.data() } as Testimonial));
-      if (testimonialsData.length > 0) {
-        setTestimonials(testimonialsData);
-      }
+      setTestimonials(testimonialsData);
+      setIsLoadingTestimonials(false);
+    }, (error) => {
+        console.error("Failed to load testimonials:", error);
+        setIsLoadingTestimonials(false);
     });
-    */
     
     const settingsDoc = doc(db, "settings", "site");
     const unsubscribeSettings = onSnapshot(settingsDoc, (doc) => {
@@ -113,10 +87,20 @@ export default function Home() {
 
     return () => {
       unsubscribeServices();
-      // unsubscribeTestimonials();
+      unsubscribeTestimonials();
       unsubscribeSettings();
     };
   }, []);
+
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const parts = name.trim().split(' ');
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
 
   return (
     <div className="flex flex-col">
@@ -141,7 +125,7 @@ export default function Home() {
                 </Button>
               </div>
             </div>
-            {isLoading && !settings.heroImageUrl ? <Skeleton className="mx-auto aspect-video w-full rounded-xl" /> : 
+            {isLoadingServices && !settings.heroImageUrl ? <Skeleton className="mx-auto aspect-video w-full rounded-xl" /> : 
             <Image
               src={settings.heroImageUrl || "https://placehold.co/600x400.png"}
               width="600"
@@ -167,7 +151,7 @@ export default function Home() {
             </div>
           </div>
           <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:max-w-none lg:grid-cols-4 mt-12">
-            {isLoading ? (
+            {isLoadingServices ? (
                 Array.from({length: 4}).map((_, i) => (
                     <Card key={i} className="text-center items-center p-6">
                         <Skeleton className="w-16 h-16 rounded-full mx-auto" />
@@ -225,7 +209,9 @@ export default function Home() {
       <section id="testimonials" className="w-full py-12 md:py-24 lg:py-32">
         <div className="container px-4 md:px-6">
           <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-5xl font-headline">What Our Customers Say</h2>
-            {testimonials.length > 0 ? (
+            {isLoadingTestimonials ? (
+                <div className="w-full max-w-4xl mx-auto mt-12"><Skeleton className="h-64 w-full" /></div>
+            ) : testimonials.length > 0 ? (
                 <Carousel className="w-full max-w-4xl mx-auto mt-12" opts={{ loop: true }}>
                 <CarouselContent>
                     {testimonials.map((testimonial) => (
@@ -233,9 +219,9 @@ export default function Home() {
                         <div className="p-1">
                         <Card>
                             <CardContent className="flex flex-col items-center justify-center p-6 space-y-4 text-center">
-                            <Avatar>
-                                <AvatarImage src={testimonial.image} alt={testimonial.name} data-ai-hint="person portrait" />
-                                <AvatarFallback>{testimonial.avatar}</AvatarFallback>
+                            <Avatar className="w-24 h-24 text-3xl">
+                                <AvatarImage src={testimonial.avatarUrl} alt={testimonial.name} data-ai-hint="person portrait" />
+                                <AvatarFallback>{getInitials(testimonial.name)}</AvatarFallback>
                             </Avatar>
                             <p className="text-lg italic text-muted-foreground">"{testimonial.text}"</p>
                             <p className="font-semibold">- {testimonial.name}</p>
@@ -248,7 +234,9 @@ export default function Home() {
                 <CarouselPrevious />
                 <CarouselNext />
                 </Carousel>
-            ) : <p className="text-center text-muted-foreground mt-8">No customer testimonials yet.</p>
+            ) : (
+                <p className="text-center text-muted-foreground mt-8">No customer testimonials yet. Add one in the admin panel!</p>
+            )
           }
         </div>
       </section>
