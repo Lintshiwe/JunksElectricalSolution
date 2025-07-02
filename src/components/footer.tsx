@@ -27,6 +27,7 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export function Footer() {
   const [settings, setSettings] = useState<Partial<Settings>>({});
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
 
   useEffect(() => {
     const settingsRef = doc(db, 'settings', 'site');
@@ -35,6 +36,10 @@ export function Footer() {
         setSettings(doc.data() as Settings);
       }
     });
+
+    // This ensures the year is only calculated on the client-side, preventing hydration errors.
+    setCurrentYear(new Date().getFullYear());
+    
     return () => unsubscribe();
   }, []);
 
@@ -80,7 +85,7 @@ export function Footer() {
         </div>
         
         <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} The Junks (Pty) Ltd. All Rights Reserved.</p>
+          {currentYear && <p>&copy; {currentYear} The Junks (Pty) Ltd. All Rights Reserved.</p>}
         </div>
       </div>
     </footer>
