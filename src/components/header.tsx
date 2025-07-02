@@ -1,12 +1,18 @@
+
 "use client";
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Lightbulb, Menu, X } from 'lucide-react';
+import { Lightbulb, Menu, X, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
+
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -19,6 +25,19 @@ const navLinks = [
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: "Logged out successfully" });
+      router.push('/');
+    } catch (error) {
+      toast({ title: "Logout failed", description: "Please try again.", variant: "destructive"});
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -41,12 +60,31 @@ export function Header() {
               {link.label}
             </Link>
           ))}
+          {user && (
+            <Link 
+              href="/admin/dashboard" 
+              className={cn(
+                "transition-colors hover:text-primary",
+                pathname.startsWith('/admin') ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              Dashboard
+            </Link>
+          )}
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-4">
-          <Button asChild className="hidden md:inline-flex bg-accent hover:bg-accent/90 text-accent-foreground">
-            <Link href="/contact">Get a Quote</Link>
-          </Button>
+          {user ? (
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
+          ) : (
+            <Button asChild className="hidden md:inline-flex bg-accent hover:bg-accent/90 text-accent-foreground">
+              <Link href="/contact">Get a Quote</Link>
+            </Button>
+          )}
+
 
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
@@ -74,10 +112,22 @@ export function Header() {
                     {link.label}
                   </Link>
                 ))}
+                 {user && (
+                    <Link
+                      href="/admin/dashboard"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={cn(
+                        "text-lg transition-colors hover:text-primary",
+                        pathname.startsWith('/admin') ? "text-primary font-semibold" : ""
+                      )}
+                    >
+                      Dashboard
+                    </Link>
+                  )}
               </div>
-              <Button asChild className="w-full mt-8 bg-accent hover:bg-accent/90 text-accent-foreground">
+              {!user && <Button asChild className="w-full mt-8 bg-accent hover:bg-accent/90 text-accent-foreground">
                 <Link href="/contact" onClick={() => setIsMobileMenuOpen(false)}>Get a Quote</Link>
-              </Button>
+              </Button>}
             </SheetContent>
           </Sheet>
         </div>

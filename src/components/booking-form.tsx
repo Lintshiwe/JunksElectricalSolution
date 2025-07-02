@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,6 +24,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 const serviceList = [
   "House Wiring",
@@ -68,13 +71,27 @@ export function BookingForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({
-      title: "Appointment Booked!",
-      description: `We've scheduled your service for ${format(values.date, "PPP")} at ${values.time}. We'll send a confirmation email to ${values.email}.`,
-    });
-    form.reset();
+    try {
+      await addDoc(collection(db, "bookings"), {
+        ...values,
+        date: format(values.date, "yyyy-MM-dd"), // Store date as a string for consistency
+        createdAt: serverTimestamp(),
+        status: "Pending",
+      });
+
+      toast({
+        title: "Appointment Booked!",
+        description: `We've scheduled your service for ${format(values.date, "PPP")} at ${values.time}. We'll send a confirmation email to ${values.email}.`,
+      });
+      form.reset();
+    } catch (error) {
+       console.error("Error adding document: ", error);
+       toast({
+        title: "Booking Failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+       });
+    }
   }
 
   return (

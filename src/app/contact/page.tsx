@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Phone, MapPin } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -46,14 +49,25 @@ export default function ContactPage() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // This is a mock submission. In a real app, you would send this data to your backend.
-    console.log(values);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({
-      title: "Message Sent!",
-      description: "Thanks for reaching out. We'll get back to you shortly.",
-    });
-    form.reset();
+    try {
+      await addDoc(collection(db, "messages"), {
+        ...values,
+        createdAt: serverTimestamp(),
+        status: "New",
+      });
+      toast({
+        title: "Message Sent!",
+        description: "Thanks for reaching out. We'll get back to you shortly.",
+      });
+      form.reset();
+    } catch (error) {
+      console.error("Error sending message: ", error);
+      toast({
+        title: "Failed to Send Message",
+        description: "Something went wrong. Please try again later.",
+        variant: "destructive",
+      });
+    }
   }
 
   return (
