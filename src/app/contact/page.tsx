@@ -94,7 +94,7 @@ export default function ContactPage() {
                     <FormItem>
                       <FormLabel>Full Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="John Doe" {...field} />
+                        <Input placeholder="Junks Malatji" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -107,7 +107,7 @@ export default function ContactPage() {
                     <FormItem>
                       <FormLabel>Email Address</FormLabel>
                       <FormControl>
-                        <Input placeholder="you@example.com" {...field} />
+                        <Input placeholder="junksmalati@gmail.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

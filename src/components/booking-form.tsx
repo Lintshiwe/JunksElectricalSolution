@@ -112,10 +112,10 @@ export function BookingForm() {
                     <h3 className="text-xl font-semibold font-headline">1. Your Information</h3>
                     <div className="grid sm:grid-cols-2 gap-4">
                       <FormField control={form.control} name="name" render={({ field }) => (
-                          <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="John Doe" {...field} /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="Junks Malatji" {...field} /></FormControl><FormMessage /></FormItem>
                         )}/>
                       <FormField control={form.control} name="email" render={({ field }) => (
-                          <FormItem><FormLabel>Email</FormLabel><FormControl><Input placeholder="you@example.com" {...field} /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel>Email</FormLabel><FormControl><Input placeholder="junksmalati@gmail.com" {...field} /></FormControl><FormMessage /></FormItem>
                         )}/>
                     </div>
                     <FormField control={form.control} name="phone" render={({ field }) => (
