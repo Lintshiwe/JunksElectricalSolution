@@ -13,26 +13,11 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-let app: FirebaseApp | null = null;
-let auth: Auth | null = null;
-let db: Firestore | null = null;
-let isFirebaseConfigured = false;
+// Initialize Firebase
+const app: FirebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const auth: Auth = getAuth(app);
+const db: Firestore = getFirestore(app);
 
-// We only initialize Firebase if the API key and project ID are provided.
-// This prevents the app from crashing if the .env file is not configured.
-if (firebaseConfig.apiKey && firebaseConfig.projectId) {
-    try {
-        app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-        auth = getAuth(app);
-        db = getFirestore(app);
-        isFirebaseConfigured = true;
-    } catch (e) {
-        // Log the error for debugging, but don't crash the app
-        console.error("Firebase initialization error:", e);
-        isFirebaseConfigured = false;
-    }
-} else {
-    console.warn("Firebase environment variables are not set. The application will run in a limited mode.");
-}
-
-export { app, auth, db, isFirebaseConfigured };
+// For simplicity, we are not re-introducing isFirebaseConfigured.
+// The app will now rely on the .env file being correctly populated.
+export { app, auth, db };
