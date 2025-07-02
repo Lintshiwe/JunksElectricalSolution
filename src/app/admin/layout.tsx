@@ -32,10 +32,6 @@ const sidebarNavItems = [
     title: "Settings",
     href: "/admin/settings",
   },
-    {
-    title: "Tools",
-    href: "/admin/tools",
-  },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
