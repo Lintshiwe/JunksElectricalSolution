@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface Message {
   id: string;
@@ -39,13 +40,39 @@ export default function MessagesPage() {
       },
       (err) => {
         console.error("Firestore error reading messages:", err);
-        setError("You don't have permission to view messages. Please update your Firestore security rules to allow reads for authenticated users.");
+        setError("You don't have permission to view messages. Please update your Firestore security rules to allow reads for authenticated users on the 'messages' collection.");
         setIsLoading(false);
       }
     );
 
     return () => unsubscribe();
   }, []);
+
+  if (isLoading) {
+      return (
+          <div className="space-y-4">
+              <Skeleton className="h-8 w-48"/>
+              <Skeleton className="h-6 w-full"/>
+              <div className="border rounded-md p-4 space-y-4">
+                  <Skeleton className="h-10 w-full"/>
+                  <Skeleton className="h-10 w-full"/>
+                  <Skeleton className="h-10 w-full"/>
+              </div>
+          </div>
+      )
+  }
+
+  if (error) {
+    return (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Permission Denied</AlertTitle>
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -55,56 +82,33 @@ export default function MessagesPage() {
           View messages from the contact form.
         </p>
       </div>
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Permission Denied</AlertTitle>
-          <AlertDescription>
-            {error}
-          </AlertDescription>
-        </Alert>
+      
+      {messages.length > 0 ? (
+        <Accordion type="single" collapsible className="w-full">
+            {messages.map((msg) => (
+                <AccordionItem value={msg.id} key={msg.id}>
+                    <AccordionTrigger>
+                        <div className="flex justify-between w-full pr-4 items-center">
+                            <div className='text-left'>
+                                <div className="font-medium">{msg.name} - <span className="text-muted-foreground font-normal">{msg.subject}</span></div>
+                                <div className="text-sm text-muted-foreground font-normal">{msg.email}</div>
+                            </div>
+                            <div className="text-sm text-muted-foreground font-normal">
+                                {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: true }) : 'N/A'}
+                            </div>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 bg-muted/50 rounded-md">
+                        {msg.message}
+                    </AccordionContent>
+                </AccordionItem>
+            ))}
+        </Accordion>
+      ) : (
+        <div className="h-24 flex items-center justify-center text-muted-foreground border rounded-md">
+            No messages found.
+        </div>
       )}
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>From</TableHead>
-              <TableHead>Subject</TableHead>
-              <TableHead>Received</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-               Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                </TableRow>
-              ))
-            ) : messages.length > 0 ? (
-              messages.map((msg) => (
-                <TableRow key={msg.id}>
-                  <TableCell>
-                    <div className="font-medium">{msg.name}</div>
-                    <div className="text-sm text-muted-foreground">{msg.email}</div>
-                  </TableCell>
-                  <TableCell>{msg.subject}</TableCell>
-                  <TableCell>
-                    {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: true }) : 'N/A'}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={3} className="h-24 text-center">
-                  {error ? "Could not load data due to permission errors." : "No messages found."}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
     </div>
   );
 }

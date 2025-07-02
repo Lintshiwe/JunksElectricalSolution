@@ -20,6 +20,7 @@ interface Settings {
     facebook: string;
     twitter: string;
     instagram: string;
+    whatsapp: string;
   };
 }
 
@@ -35,9 +36,17 @@ export default function SettingsPage() {
         setSettings(doc.data());
       }
       setIsLoading(false);
+    }, (error) => {
+        console.error("Firestore error reading settings:", error);
+        toast({
+            title: "Permission Denied",
+            description: "Could not load site settings due to Firestore permissions. Please update your security rules.",
+            variant: "destructive"
+        });
+        setIsLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   const handleSave = async () => {
     try {
@@ -60,7 +69,7 @@ export default function SettingsPage() {
     setSettings(prev => ({
       ...prev,
       socials: {
-        ...prev.socials,
+        ...prev?.socials,
         [id]: value,
       },
     }));
@@ -130,6 +139,10 @@ export default function SettingsPage() {
               <Label htmlFor="instagram">Instagram URL</Label>
               <Input id="instagram" value={settings.socials?.instagram || ''} onChange={handleSocialChange} />
             </div>
+             <div className="space-y-2">
+              <Label htmlFor="whatsapp">WhatsApp URL (e.g., https://wa.me/123...)</Label>
+              <Input id="whatsapp" value={settings.socials?.whatsapp || ''} onChange={handleSocialChange} />
+            </div>
           </CardContent>
         </Card>
         
@@ -137,7 +150,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Homepage Settings</CardTitle>
              <CardDescription>Manage content on the homepage.</CardDescription>
-          </CardHeader>
+          </Header>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="heroImageUrl">Hero Image URL</Label>
