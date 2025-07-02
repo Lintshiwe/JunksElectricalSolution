@@ -45,9 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                       <AlertTitle>Firebase Configuration Error</AlertTitle>
                       <AlertDescription>
                           <div className="space-y-2">
-                            <p>Your application is not connected to Firebase because the required environment variables are missing or incorrect.</p>
-                            <p>Please ensure that all <code>NEXT_PUBLIC_FIREBASE_*</code> variables in your <code>.env</code> file are correct.</p>
-                            <p className="pt-2">You can find these keys in your Firebase project settings.</p>
+                            <p>This error appears because the Firebase credentials in your <code>.env</code> file are placeholders.</p>
+                            <p>To fix this, please open the <code>.env</code> file in the editor and replace the placeholder values (e.g., <code>"your_firebase_api_key_goes_here"</code>) with your actual keys from the Firebase Console.</p>
+                            <p className="pt-2">Your app cannot connect to Firebase without these keys.</p>
                             <div className="pt-2">
                                 <Button onClick={() => window.location.reload()}>Refresh After Updating .env</Button>
                             </div>
