@@ -1,7 +1,36 @@
+
+"use client";
+
+import { useEffect, useState } from 'react';
 import Link from "next/link";
 import { Lightbulb, Facebook, Twitter, Instagram } from "lucide-react";
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+interface Settings {
+  location: string;
+  phone: string;
+  email: string;
+  socials: {
+    facebook: string;
+    twitter: string;
+    instagram: string;
+  };
+}
 
 export function Footer() {
+  const [settings, setSettings] = useState<Partial<Settings>>({});
+
+  useEffect(() => {
+    const settingsRef = doc(db, 'settings', 'site');
+    const unsubscribe = onSnapshot(settingsRef, (doc) => {
+      if (doc.exists()) {
+        setSettings(doc.data() as Settings);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   return (
     <footer className="border-t">
       <div className="container py-12">
@@ -30,13 +59,13 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-3">Contact Us</h4>
             <div className="space-y-2 text-muted-foreground">
-              <p>Makhwibidung Village Stand No 54, Tzaneen, Limpopo</p>
-              <p>Email: junksmalati@gmail.com</p>
-              <p>Phone: 081 075 5476 / 082 738 8845</p>
+              <p>{settings.location || 'Makhwibidung Village Stand No 54, Tzaneen, Limpopo'}</p>
+              <p>Email: {settings.email || 'junksmalati@gmail.com'}</p>
+              <p>Phone: {settings.phone || '081 075 5476 / 082 738 8845'}</p>
               <div className="flex space-x-4 pt-2">
-                <Link href="#" className="text-muted-foreground hover:text-primary transition-colors"><Facebook /></Link>
-                <Link href="#" className="text-muted-foreground hover:text-primary transition-colors"><Twitter /></Link>
-                <Link href="#" className="text-muted-foreground hover:text-primary transition-colors"><Instagram /></Link>
+                {settings.socials?.facebook && <Link href={settings.socials.facebook} target="_blank" className="text-muted-foreground hover:text-primary transition-colors"><Facebook /></Link>}
+                {settings.socials?.twitter && <Link href={settings.socials.twitter} target="_blank" className="text-muted-foreground hover:text-primary transition-colors"><Twitter /></Link>}
+                {settings.socials?.instagram && <Link href={settings.socials.instagram} target="_blank" className="text-muted-foreground hover:text-primary transition-colors"><Instagram /></Link>}
               </div>
             </div>
           </div>

@@ -20,6 +20,14 @@ const sidebarNavItems = [
     title: "Messages",
     href: "/admin/messages",
   },
+  {
+    title: "Services",
+    href: "/admin/services",
+  },
+    {
+    title: "Settings",
+    href: "/admin/settings",
+  },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

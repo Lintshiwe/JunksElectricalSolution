@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -25,26 +26,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, onSnapshot, query, orderBy } from "firebase/firestore";
 
-const serviceList = [
-  "House Wiring",
-  "Motor Test",
-  "Motor Wiring",
-  "Motor Gate",
-  "Fault Finding",
-  "Solar System",
-  "Geyser System",
-  "Electrical Maintenance",
-  "Lighting Installation",
-  "Electrical Repairs",
-  "Generator Installation",
-  "Electrical Panel Upgrades",
-  "Home Automation",
-  "Emergency Electrical Services",
-  "Energy Efficiency Audits",
-  "Other"
-];
+interface Service {
+    id: string;
+    title: string;
+}
 
 const timeSlots = ["9:00 AM - 11:00 AM", "11:00 AM - 1:00 PM", "1:00 PM - 3:00 PM", "3:00 PM - 5:00 PM"];
 
@@ -60,6 +47,9 @@ const formSchema = z.object({
 
 export function BookingForm() {
   const { toast } = useToast();
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoadingServices, setIsLoadingServices] = useState(true);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -69,6 +59,17 @@ export function BookingForm() {
       details: "",
     },
   });
+
+  useEffect(() => {
+    const q = query(collection(db, 'services'), orderBy('title'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const servicesData: Service[] = [];
+        snapshot.forEach(doc => servicesData.push({ id: doc.id, title: doc.data().title }));
+        setServices(servicesData);
+        setIsLoadingServices(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -127,9 +128,12 @@ export function BookingForm() {
                      <FormField control={form.control} name="service" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Service Required</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select a service" /></SelectTrigger></FormControl>
-                            <SelectContent><SelectItem value="placeholder" disabled>Select a service</SelectItem>{serviceList.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                          <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingServices}>
+                            <FormControl><SelectTrigger><SelectValue placeholder={isLoadingServices ? "Loading services..." : "Select a service"} /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              {services.map(s => <SelectItem key={s.id} value={s.title}>{s.title}</SelectItem>)}
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
                           </Select>
                           <FormMessage />
                         </FormItem>

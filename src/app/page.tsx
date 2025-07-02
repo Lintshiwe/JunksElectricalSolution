@@ -1,33 +1,19 @@
+
+"use client";
+
+import { useEffect, useState } from 'react';
+import { collection, onSnapshot, query, where, limit, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Lightbulb, Wrench, Home as HomeIcon, ShieldCheck, Zap, Star, Building2, Sun, Siren, Smartphone, Leaf, Award } from "lucide-react";
+import { Award, Leaf, Zap } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { Skeleton } from '@/components/ui/skeleton';
+import { ServiceIcon } from '@/components/service-icon';
 
-const services = [
-  {
-    icon: <Sun className="w-8 h-8 text-primary" />,
-    title: "Solar Systems",
-    description: "Sustainable solar power solutions for homes and businesses.",
-  },
-  {
-    icon: <HomeIcon className="w-8 h-8 text-primary" />,
-    title: "House Wiring",
-    description: "Safe, professional wiring for new constructions and renovations.",
-  },
-  {
-    icon: <Siren className="w-8 h-8 text-primary" />,
-    title: "Emergency Services",
-    description: "24/7 rapid response for all your urgent electrical needs.",
-  },
-  {
-    icon: <Smartphone className="w-8 h-8 text-primary" />,
-    title: "Home Automation",
-    description: "Integrate smart technology for a more connected home.",
-  },
-];
 
 const features = [
   {
@@ -47,20 +33,41 @@ const features = [
   },
 ];
 
-const testimonials = [
+interface Service {
+  id: string;
+  title: string;
+  description: string;
+}
+
+interface Testimonial {
+  id: string;
+  name: string;
+  avatar: string;
+  text: string;
+  image?: string;
+}
+
+interface Settings {
+  heroImageUrl?: string;
+}
+
+const hardcodedTestimonials = [
   {
+    id: "1",
     name: "Sarah L.",
     avatar: "SL",
     image: "https://placehold.co/100x100.png",
     text: "The Junks were a lifesaver! They fixed my power outage in the middle of the night. Professional, fast, and reasonably priced. Highly recommend!",
   },
   {
+    id: "2",
     name: "Mike R.",
     avatar: "MR",
     image: "https://placehold.co/100x100.png",
     text: "The team installed new lighting in our retail store. The difference is night and day! The project was completed on time and on budget. Fantastic work.",
   },
   {
+    id: "3",
     name: "Jennifer Chen",
     avatar: "JC",
     image: "https://placehold.co/100x100.png",
@@ -69,6 +76,48 @@ const testimonials = [
 ];
 
 export default function Home() {
+  const [services, setServices] = useState<Service[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>(hardcodedTestimonials);
+  const [settings, setSettings] = useState<Settings>({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsLoading(true);
+    const servicesQuery = query(collection(db, "services"), limit(4));
+    const unsubscribeServices = onSnapshot(servicesQuery, (snapshot) => {
+      const servicesData: Service[] = [];
+      snapshot.forEach((doc) => servicesData.push({ id: doc.id, ...doc.data() } as Service));
+      setServices(servicesData);
+      setIsLoading(false);
+    }, () => setIsLoading(false));
+
+    // For now, we will keep testimonials hardcoded as there is no admin management for them yet.
+    // If you want to use Firestore for testimonials, uncomment the following block.
+    /*
+    const testimonialsQuery = query(collection(db, "testimonials"), where("approved", "==", true), limit(5));
+    const unsubscribeTestimonials = onSnapshot(testimonialsQuery, (snapshot) => {
+      const testimonialsData: Testimonial[] = [];
+      snapshot.forEach((doc) => testimonialsData.push({ id: doc.id, ...doc.data() } as Testimonial));
+      if (testimonialsData.length > 0) {
+        setTestimonials(testimonialsData);
+      }
+    });
+    */
+    
+    const settingsDoc = doc(db, "settings", "site");
+    const unsubscribeSettings = onSnapshot(settingsDoc, (doc) => {
+        if(doc.exists()) {
+            setSettings(doc.data() as Settings);
+        }
+    });
+
+    return () => {
+      unsubscribeServices();
+      // unsubscribeTestimonials();
+      unsubscribeSettings();
+    };
+  }, []);
+
   return (
     <div className="flex flex-col">
       <section className="w-full py-20 md:py-32 lg:py-40 bg-primary/10">
@@ -92,14 +141,16 @@ export default function Home() {
                 </Button>
               </div>
             </div>
+            {isLoading && !settings.heroImageUrl ? <Skeleton className="mx-auto aspect-video w-full rounded-xl" /> : 
             <Image
-              src="https://placehold.co/600x400.png"
+              src={settings.heroImageUrl || "https://placehold.co/600x400.png"}
               width="600"
               height="400"
               alt="Hero"
               data-ai-hint="electrician work"
               className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last"
-            />
+              priority
+            />}
           </div>
         </div>
       </section>
@@ -116,19 +167,30 @@ export default function Home() {
             </div>
           </div>
           <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:max-w-none lg:grid-cols-4 mt-12">
-            {services.map((service, index) => (
-              <Card key={index} className="text-center hover:shadow-lg transition-shadow duration-300">
-                <CardHeader>
-                  <div className="mx-auto bg-primary/10 p-4 rounded-full w-fit">
-                    {service.icon}
-                  </div>
-                  <CardTitle className="mt-4">{service.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{service.description}</p>
-                </CardContent>
-              </Card>
-            ))}
+            {isLoading ? (
+                Array.from({length: 4}).map((_, i) => (
+                    <Card key={i} className="text-center items-center p-6">
+                        <Skeleton className="w-16 h-16 rounded-full mx-auto" />
+                        <Skeleton className="h-6 w-3/4 mx-auto mt-4" />
+                        <Skeleton className="h-4 w-full mt-4" />
+                        <Skeleton className="h-4 w-5/6 mx-auto mt-2" />
+                    </Card>
+                ))
+            ) : services.length > 0 ? (
+                services.map((service) => (
+                    <Card key={service.id} className="flex flex-col text-center items-center hover:shadow-lg transition-shadow duration-300">
+                        <CardHeader className="items-center">
+                            <div className="bg-primary/10 p-3 rounded-full">
+                                <ServiceIcon serviceName={service.title} />
+                            </div>
+                            <CardTitle className="text-lg mt-4">{service.title}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-grow">
+                            <p className="text-muted-foreground">{service.description}</p>
+                        </CardContent>
+                    </Card>
+                ))
+            ) : <p className="col-span-full text-center text-muted-foreground">No services found. Please add services in the admin panel.</p>}
           </div>
            <div className="text-center mt-12">
               <Button asChild>
@@ -163,28 +225,31 @@ export default function Home() {
       <section id="testimonials" className="w-full py-12 md:py-24 lg:py-32">
         <div className="container px-4 md:px-6">
           <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-5xl font-headline">What Our Customers Say</h2>
-          <Carousel className="w-full max-w-4xl mx-auto mt-12" opts={{ loop: true }}>
-            <CarouselContent>
-              {testimonials.map((testimonial, index) => (
-                <CarouselItem key={index}>
-                  <div className="p-1">
-                    <Card>
-                      <CardContent className="flex flex-col items-center justify-center p-6 space-y-4 text-center">
-                        <Avatar>
-                           <AvatarImage src={testimonial.image} alt={testimonial.name} data-ai-hint="person portrait" />
-                          <AvatarFallback>{testimonial.avatar}</AvatarFallback>
-                        </Avatar>
-                        <p className="text-lg italic text-muted-foreground">"{testimonial.text}"</p>
-                        <p className="font-semibold">- {testimonial.name}</p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious />
-            <CarouselNext />
-          </Carousel>
+            {testimonials.length > 0 ? (
+                <Carousel className="w-full max-w-4xl mx-auto mt-12" opts={{ loop: true }}>
+                <CarouselContent>
+                    {testimonials.map((testimonial) => (
+                    <CarouselItem key={testimonial.id}>
+                        <div className="p-1">
+                        <Card>
+                            <CardContent className="flex flex-col items-center justify-center p-6 space-y-4 text-center">
+                            <Avatar>
+                                <AvatarImage src={testimonial.image} alt={testimonial.name} data-ai-hint="person portrait" />
+                                <AvatarFallback>{testimonial.avatar}</AvatarFallback>
+                            </Avatar>
+                            <p className="text-lg italic text-muted-foreground">"{testimonial.text}"</p>
+                            <p className="font-semibold">- {testimonial.name}</p>
+                            </CardContent>
+                        </Card>
+                        </div>
+                    </CarouselItem>
+                    ))}
+                </CarouselContent>
+                <CarouselPrevious />
+                <CarouselNext />
+                </Carousel>
+            ) : <p className="text-center text-muted-foreground mt-8">No customer testimonials yet.</p>
+          }
         </div>
       </section>
 
