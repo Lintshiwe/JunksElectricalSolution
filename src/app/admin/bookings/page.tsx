@@ -2,15 +2,16 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
 
 interface Booking {
   id: string;
@@ -80,6 +81,27 @@ export default function BookingsPage() {
     }
   };
 
+  const handleDelete = async (bookingId: string) => {
+    if (!window.confirm('Are you sure you want to delete this booking? This cannot be undone.')) {
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, 'bookings', bookingId));
+      toast({
+        title: 'Booking Deleted',
+        description: 'The booking was successfully deleted.',
+      });
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      toast({
+        title: 'Delete Failed',
+        description: 'Could not delete the booking.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+
   return (
     <div className="space-y-6">
       <div>
@@ -105,7 +127,8 @@ export default function BookingsPage() {
               <TableHead>Contact</TableHead>
               <TableHead>Service</TableHead>
               <TableHead>Date & Time</TableHead>
-              <TableHead className="text-right">Status</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -116,7 +139,8 @@ export default function BookingsPage() {
                   <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                  <TableCell className="text-right"><Skeleton className="h-8 w-28 ml-auto" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-28" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                 </TableRow>
               ))
             ) : bookings.length > 0 ? (
@@ -129,12 +153,12 @@ export default function BookingsPage() {
                   </TableCell>
                   <TableCell>{booking.service}</TableCell>
                   <TableCell>{`${booking.date} at ${booking.time}`}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell>
                     <Select
                       value={booking.status}
                       onValueChange={(newStatus: Booking['status']) => handleStatusChange(booking.id, newStatus)}
                     >
-                      <SelectTrigger className="w-[120px] ml-auto">
+                      <SelectTrigger className="w-[120px]">
                         <SelectValue>
                            <Badge variant={statusColors[booking.status]}>{booking.status}</Badge>
                         </SelectValue>
@@ -148,11 +172,16 @@ export default function BookingsPage() {
                       </SelectContent>
                     </Select>
                   </TableCell>
+                   <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(booking.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   {error ? "Could not load data due to permission errors." : "No bookings found."}
                 </TableCell>
               </TableRow>
