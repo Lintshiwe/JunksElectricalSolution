@@ -5,11 +5,12 @@ import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, BookMarked, MessageSquare } from "lucide-react";
+import { Activity, BookMarked, MessageSquare, AlertCircle } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface Booking {
   id: string;
@@ -30,43 +31,62 @@ export default function DashboardPage() {
   const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
   const [recentMessages, setRecentMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Bookings listener
-    const bookingsQuery = query(collection(db, "bookings"), orderBy("createdAt", "desc"), limit(5));
-    const unsubscribeBookings = onSnapshot(bookingsQuery, (snapshot) => {
-      setStats(prev => ({...prev, bookings: snapshot.size}));
-      
-      const recent: Booking[] = [];
-      snapshot.docs.forEach(doc => recent.push({ id: doc.id, ...doc.data() } as Booking));
-      setRecentBookings(recent);
-      
+    const handleFirestoreError = (err: any) => {
+      console.error("Firestore error:", err);
+      if (!error) { // To avoid setting the error multiple times
+        setError("Could not load dashboard data. Please update your Firestore security rules to allow reads for authenticated users on the 'bookings' and 'messages' collections.");
+      }
       setIsLoading(false);
-    });
+    };
 
-    // Messages listener
-    const messagesQuery = query(collection(db, "messages"), orderBy("createdAt", "desc"), limit(5));
-    const unsubscribeMessages = onSnapshot(messagesQuery, (snapshot) => {
-       const messagesData: Message[] = [];
-       snapshot.forEach((doc) => {
-         messagesData.push({ id: doc.id, ...doc.data() } as Message);
-       });
-      setRecentMessages(messagesData);
+    // Listen to total bookings count
+    const allBookingsQuery = query(collection(db, 'bookings'));
+    const unsubscribeAllBookings = onSnapshot(allBookingsQuery, 
+      (snapshot) => setStats(prev => ({ ...prev, bookings: snapshot.size })), 
+      handleFirestoreError
+    );
 
-      // Get total count for stats
-      const allMessagesQuery = query(collection(db, 'messages'));
-      onSnapshot(allMessagesQuery, (allMessagesSnapshot) => {
-        setStats(prev => ({...prev, messages: allMessagesSnapshot.size}));
-      });
+    // Listen to recent bookings
+    const recentBookingsQuery = query(collection(db, "bookings"), orderBy("createdAt", "desc"), limit(5));
+    const unsubscribeRecentBookings = onSnapshot(recentBookingsQuery, 
+      (snapshot) => {
+        const recent: Booking[] = [];
+        snapshot.forEach(doc => recent.push({ id: doc.id, ...doc.data() } as Booking));
+        setRecentBookings(recent);
+        if (!error) setIsLoading(false);
+      }, 
+      handleFirestoreError
+    );
 
-      setIsLoading(false);
-    });
+    // Listen to total messages count
+    const allMessagesQuery = query(collection(db, 'messages'));
+    const unsubscribeAllMessages = onSnapshot(allMessagesQuery, 
+      (snapshot) => setStats(prev => ({ ...prev, messages: snapshot.size })),
+      handleFirestoreError
+    );
+
+    // Listen to recent messages
+    const recentMessagesQuery = query(collection(db, "messages"), orderBy("createdAt", "desc"), limit(5));
+    const unsubscribeRecentMessages = onSnapshot(recentMessagesQuery, 
+      (snapshot) => {
+        const messagesData: Message[] = [];
+        snapshot.forEach((doc) => messagesData.push({ id: doc.id, ...doc.data() } as Message));
+        setRecentMessages(messagesData);
+        if (!error) setIsLoading(false);
+      },
+      handleFirestoreError
+    );
 
     return () => {
-      unsubscribeBookings();
-      unsubscribeMessages();
+      unsubscribeAllBookings();
+      unsubscribeRecentBookings();
+      unsubscribeAllMessages();
+      unsubscribeRecentMessages();
     };
-  }, []);
+  }, [error]);
 
   return (
     <div className="space-y-6">
@@ -76,6 +96,13 @@ export default function DashboardPage() {
           A summary of your website's recent activity.
         </p>
       </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Permission Denied</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -84,7 +111,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-8 w-12" /> : <div className="text-2xl font-bold">{stats.bookings}</div>}
-            <p className="text-xs text-muted-foreground">Latest bookings.</p>
+            <p className="text-xs text-muted-foreground">Total bookings received.</p>
           </CardContent>
         </Card>
         <Card>
@@ -134,7 +161,7 @@ export default function DashboardPage() {
                     ))}
                   </TableBody>
                 </Table>
-              ) : <p className="text-muted-foreground">No bookings yet.</p>
+              ) : <p className="text-muted-foreground">{error ? 'Could not load bookings.' : 'No bookings yet.'}</p>
             )}
           </CardContent>
         </Card>
@@ -158,7 +185,7 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
-              ) : <p className="text-muted-foreground">No messages yet.</p>
+              ) : <p className="text-muted-foreground">{error ? 'Could not load messages.' : 'No messages yet.'}</p>
             )}
           </CardContent>
         </Card>
