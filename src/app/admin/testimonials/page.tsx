@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
+import imageCompression from 'browser-image-compression';
 
 interface Testimonial {
   id: string;
@@ -52,9 +53,24 @@ export default function TestimonialsPage() {
     return () => unsubscribe();
   }, [toast]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setAvatarFile(e.target.files[0]);
+      const file = e.target.files[0];
+      toast({ title: 'Compressing avatar...' });
+      try {
+        const options = {
+          maxSizeMB: 0.5, // Avatars can be smaller
+          maxWidthOrHeight: 400,
+          useWebWorker: true,
+        };
+        const compressedFile = await imageCompression(file, options);
+        setAvatarFile(compressedFile);
+        toast({ title: 'Avatar ready', description: 'The compressed avatar is ready.' });
+      } catch (error) {
+        console.error('Error compressing image:', error);
+        toast({ title: 'Compression Failed', description: 'Could not compress the image.', variant: 'destructive' });
+        setAvatarFile(null);
+      }
     }
   };
   
@@ -69,6 +85,11 @@ export default function TestimonialsPage() {
     if (!currentTestimonial.name || !currentTestimonial.text) {
       toast({ title: "Validation Error", description: "Name and testimonial text are required.", variant: 'destructive' });
       return;
+    }
+
+    if (!storage) {
+        toast({ title: 'Configuration Error', description: 'Firebase Storage is not properly configured. Check your environment variables.', variant: 'destructive' });
+        return;
     }
     
     let testimonialData: Partial<Testimonial> = { 
@@ -176,10 +197,14 @@ export default function TestimonialsPage() {
                </div>
                <div className="space-y-2">
                 <Label htmlFor="avatarUrl">Avatar Image</Label>
-                {currentTestimonial.avatarUrl && !avatarFile && (
-                  <div className="mt-2">
-                    <Image src={currentTestimonial.avatarUrl} alt="Avatar Preview" width={64} height={64} className="rounded-full object-cover" />
-                  </div>
+                {avatarFile ? (
+                    <div className="mt-2">
+                        <Image src={URL.createObjectURL(avatarFile)} alt="New Avatar Preview" width={64} height={64} className="rounded-full object-cover" />
+                    </div>
+                 ) : currentTestimonial.avatarUrl && (
+                    <div className="mt-2">
+                        <Image src={currentTestimonial.avatarUrl} alt="Avatar Preview" width={64} height={64} className="rounded-full object-cover" />
+                    </div>
                 )}
                 <Input id="avatarUrl" type="file" onChange={handleFileChange} accept="image/*"/>
                 {uploadProgress > 0 && <Progress value={uploadProgress} className="w-[60%] mt-2" />}

@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import Image from 'next/image';
+import imageCompression from 'browser-image-compression';
 
 interface Settings {
   location: string;
@@ -55,13 +56,33 @@ export default function SettingsPage() {
     return () => unsubscribe();
   }, [toast]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setHeroImageFile(e.target.files[0]);
+      const file = e.target.files[0];
+      toast({ title: 'Compressing image...', description: 'Please wait a moment.' });
+      try {
+        const options = {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+        };
+        const compressedFile = await imageCompression(file, options);
+        setHeroImageFile(compressedFile);
+        toast({ title: 'Image ready', description: 'The compressed image is ready to be uploaded.' });
+      } catch (error) {
+        console.error('Error compressing image:', error);
+        toast({ title: 'Compression Failed', description: 'Could not compress the image. Please try another file.', variant: 'destructive' });
+        setHeroImageFile(null);
+      }
     }
   };
 
   const handleSave = async () => {
+    if (!storage) {
+      toast({ title: 'Configuration Error', description: 'Firebase Storage is not properly configured. Check your environment variables.', variant: 'destructive' });
+      return;
+    }
+
     setIsSaving(true);
     let updatedSettings = { ...settings };
 
@@ -203,7 +224,11 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="heroImageUrl">Hero Image</Label>
-              {settings.heroImageUrl && (
+              {heroImageFile ? (
+                <div className="mt-2">
+                    <Image src={URL.createObjectURL(heroImageFile)} alt="New Hero Image Preview" width={200} height={100} className="rounded-md object-cover" />
+                </div>
+              ) : settings.heroImageUrl && (
                 <div className="mt-2">
                   <Image src={settings.heroImageUrl} alt="Hero Image Preview" width={200} height={100} className="rounded-md object-cover" />
                 </div>
