@@ -3,13 +3,16 @@
 
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
+import Image from 'next/image';
 
 interface Settings {
   location: string;
@@ -27,6 +30,10 @@ interface Settings {
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Partial<Settings>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [heroImageFile, setHeroImageFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -48,14 +55,56 @@ export default function SettingsPage() {
     return () => unsubscribe();
   }, [toast]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setHeroImageFile(e.target.files[0]);
+    }
+  };
+
   const handleSave = async () => {
+    setIsSaving(true);
+    let updatedSettings = { ...settings };
+
+    if (heroImageFile) {
+      const storageRef = ref(storage, `site-assets/hero-image-${Date.now()}`);
+      const uploadTask = uploadBytesResumable(storageRef, heroImageFile);
+
+      try {
+        await new Promise<void>((resolve, reject) => {
+          uploadTask.on('state_changed',
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              setUploadProgress(progress);
+            },
+            (error) => {
+              console.error("Upload failed:", error);
+              reject(error);
+            },
+            async () => {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              updatedSettings.heroImageUrl = downloadURL;
+              setHeroImageFile(null);
+              setUploadProgress(0);
+              resolve();
+            }
+          );
+        });
+      } catch (error) {
+        toast({ title: 'Image Upload Failed', description: 'Could not upload the new hero image.', variant: 'destructive' });
+        setIsSaving(false);
+        return;
+      }
+    }
+
     try {
       const settingsRef = doc(db, 'settings', 'site');
-      await setDoc(settingsRef, settings, { merge: true });
+      await setDoc(settingsRef, updatedSettings, { merge: true });
       toast({ title: 'Success', description: 'Settings saved successfully.' });
     } catch (error) {
       console.error("Error saving settings:", error);
       toast({ title: 'Error', description: 'Failed to save settings.', variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -69,7 +118,7 @@ export default function SettingsPage() {
     setSettings(prev => ({
       ...prev,
       socials: {
-        ...prev?.socials,
+        ...(prev?.socials ?? {}),
         [id]: value,
       },
     }));
@@ -108,15 +157,15 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="location">Address</Label>
-              <Input id="location" value={settings.location || ''} onChange={handleInputChange} />
+              <Input id="location" value={settings.location || ''} onChange={handleInputChange} disabled={isSaving}/>
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" value={settings.phone || ''} onChange={handleInputChange} />
+              <Input id="phone" value={settings.phone || ''} onChange={handleInputChange} disabled={isSaving}/>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
-              <Input id="email" type="email" value={settings.email || ''} onChange={handleInputChange} />
+              <Input id="email" type="email" value={settings.email || ''} onChange={handleInputChange} disabled={isSaving}/>
             </div>
           </CardContent>
         </Card>
@@ -129,19 +178,19 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="facebook">Facebook URL</Label>
-              <Input id="facebook" value={settings.socials?.facebook || ''} onChange={handleSocialChange} />
+              <Input id="facebook" value={settings.socials?.facebook || ''} onChange={handleSocialChange} disabled={isSaving}/>
             </div>
              <div className="space-y-2">
               <Label htmlFor="twitter">Twitter / X URL</Label>
-              <Input id="twitter" value={settings.socials?.twitter || ''} onChange={handleSocialChange} />
+              <Input id="twitter" value={settings.socials?.twitter || ''} onChange={handleSocialChange} disabled={isSaving}/>
             </div>
              <div className="space-y-2">
               <Label htmlFor="instagram">Instagram URL</Label>
-              <Input id="instagram" value={settings.socials?.instagram || ''} onChange={handleSocialChange} />
+              <Input id="instagram" value={settings.socials?.instagram || ''} onChange={handleSocialChange} disabled={isSaving}/>
             </div>
              <div className="space-y-2">
               <Label htmlFor="whatsapp">WhatsApp URL (e.g., https://wa.me/123...)</Label>
-              <Input id="whatsapp" value={settings.socials?.whatsapp || ''} onChange={handleSocialChange} />
+              <Input id="whatsapp" value={settings.socials?.whatsapp || ''} onChange={handleSocialChange} disabled={isSaving}/>
             </div>
           </CardContent>
         </Card>
@@ -153,14 +202,23 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="heroImageUrl">Hero Image URL</Label>
-              <Input id="heroImageUrl" value={settings.heroImageUrl || ''} onChange={handleInputChange} placeholder="https://example.com/image.png" />
+              <Label htmlFor="heroImageUrl">Hero Image</Label>
+              {settings.heroImageUrl && (
+                <div className="mt-2">
+                  <Image src={settings.heroImageUrl} alt="Hero Image Preview" width={200} height={100} className="rounded-md object-cover" />
+                </div>
+              )}
+              <Input id="heroImageUrl" type="file" onChange={handleFileChange} accept="image/*" disabled={isSaving}/>
+              <p className="text-sm text-muted-foreground">Select a new image to replace the current one. The new image will be uploaded when you save settings.</p>
+              {isSaving && heroImageFile && <Progress value={uploadProgress} className="w-[60%] mt-2" />}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Button onClick={handleSave}>Save Settings</Button>
+      <Button onClick={handleSave} disabled={isSaving}>
+        {isSaving ? 'Saving...' : 'Save All Settings'}
+      </Button>
     </div>
   );
 }
