@@ -150,7 +150,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Homepage Settings</CardTitle>
              <CardDescription>Manage content on the homepage.</CardDescription>
-          </Header>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="heroImageUrl">Hero Image URL</Label>
